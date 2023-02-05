@@ -1,0 +1,114 @@
+--drop table  create_insert_table_with_proc
+Create or replace table create_insert_table_with_proc(ID INT AUTOINCREMENT START = 1 INCREMENT =1,
+                                                     Table_Name Varchar,
+                                                     ACTIVE_FLAG Varchar,
+                                                     SQL_Query Varchar(32896),
+                                                     REC_CRT_DTTM timestamp);
+
+--creating Players table query
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','Create or replace table SNOWDB.PRCD.PLAYERS (ID INT AUTOINCREMENT START = 1 INCREMENT =1,PLAYER_NAME Varchar,IPL_TEAM VARCHAR, NO_OF_IPL_TROPHIES_WON INT,CRT_UPD_DTTM timestamp)',CURRENT_TIMESTAMP())
+
+---insert into table created
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''MS Dhoni'',''Chennai Super Kings'',4,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+----2nd insert
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Virat Kohli'',''Royal Challengers Bangolore'',0,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+--3rd insert 
+ Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Rohit Sharma'',''Mumbai Indians'',5,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+
+----4th insert
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Hardik Pandya'',''Gujarat Titans'',1,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+---5th insert with Active_Flag = N
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','N','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Yuvraj Singh'',''Punjab Kings'',0,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+---6th Insert
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Ambati Rayudu'',''Chenni Super Kings'',4,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+--Insering Flag as Y and updating to N
+Insert into create_insert_table_with_proc(Table_Name,ACTIVE_FLAG,SQL_Query,REC_CRT_DTTM) 
+values ('SNOWDB.PRCD.PLAYERS','Y','insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Suresh Raina'',''Chenni Super Kings'',4,CURRENT_TIMESTAMP())',CURRENT_TIMESTAMP())
+Update create_insert_table_with_proc set ACTIVE_FLAG = 'N' 
+where SQL_Query like '%Suresh%'
+
+---
+--Updating Ruturaj with Jadeja
+
+Update create_insert_table_with_proc set SQL_Query ='insert into SNOWDB.PRCD.PLAYERS(PLAYER_NAME,IPL_TEAM,NO_OF_IPL_TROPHIES_WON,CRT_UPD_DTTM) values (''Ravindra Jadeja'',''Chenni Super Kings'',4,CURRENT_TIMESTAMP()'
+where SQL_Query like '%Ruturaj%'
+
+--Updating Ruturaj with Jadeja
+select *  from create_insert_table_with_proc
+select * from create_insert_table_with_proc   
+drop table   create_insert_table_with_proc 
+
+------writng a PROC to execute sql_query from create_insert_table_with_proc
+
+CREATE OR REPLACE PROCEDURE SNOWDB.PRCD.EXECUTE_SQL_QUERY_PROC (P_TABLE_NAME VARCHAR)
+RETURNS VARCHAR
+LANGUAGE SQL
+EXECUTE AS CALLER
+AS
+$$
+DECLARE
+
+OUTBOUND_QUERY                          VARCHAR;
+RS1                                     RESULTSET;
+RS_OUTBOUND_QUERY                       VARCHAR;
+RS2                                     RESULTSET;
+R1                                      timestamp;
+RS3                                     RESULTSET;
+RESULT_OUTBOUND_QUERY                   VARCHAR;
+                                 
+
+BEGIN
+
+   ALTER SESSION SET TRANSACTION_ABORT_ON_ERROR = FALSE;
+   
+  
+   USE DATABASE SNOWDB;
+   USE SCHEMA   PRCD;
+
+  OUTBOUND_QUERY  := 'SELECT DISTINCT TABLE_NAME,ACTIVE_FLAG,SQL_QUERY,REC_CRT_DTTM FROM Snowdb.Prcd.create_insert_table_with_proc WHERE 
+  TABLE_NAME = '||'\''||:P_TABLE_NAME||'\'' ||' AND ACTIVE_FLAG =''Y'' ORDER BY REC_CRT_DTTM';
+  RS1  := (EXECUTE IMMEDIATE :OUTBOUND_QUERY);
+   
+  FOR i IN RS1 DO
+  BEGIN TRANSACTION; 
+   BEGIN      
+   R1  := i.REC_CRT_DTTM;
+
+     RESULT_OUTBOUND_QUERY  := 'SELECT SQL_QUERY FROM Snowdb.Prcd.create_insert_table_with_proc WHERE 
+     TABLE_NAME = '||'\''||:P_TABLE_NAME||'\'' ||' AND ACTIVE_FLAG =''Y'' AND REC_CRT_DTTM='||'\''||:R1||'\'';
+     RS2  := (EXECUTE IMMEDIATE :RESULT_OUTBOUND_QUERY);
+     
+     LET C2 CURSOR FOR RS2;
+     OPEN  C2;
+     FETCH C2 INTO RS_OUTBOUND_QUERY;
+     RS3 := (EXECUTE IMMEDIATE :RS_OUTBOUND_QUERY);   
+     COMMIT;
+      
+    END;
+  END FOR;
+  RETURN 'Success' ;
+END;
+$$
+
+=================
+create or replace task procedure_call_task_for_Create_insert
+WAREHOUSE=COMPUTE_WH 
+SCHEDULE = '1 MINUTE'
+AS
+call SNOWDB.PRCD.EXECUTE_SQL_QUERY_PROC ('SNOWDB.PRCD.PLAYERS')
+
+alter task procedure_call_task_for_Create_insert suspend
+truncate table  SNOWDB.PRCD.PLAYERS
+select * from SNOWDB.PRCD.PLAYERS
+select * from create_insert_table_with_proc 
+truncate table create_insert_table_with_proc 
+show parameters
+show procedures
+desc procedures EXECUTE_SQL_QUERY_PROC
